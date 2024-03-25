@@ -1,18 +1,21 @@
-# Metagenome Shotgun data QC/gene annotation pipeline
+# Microbial RNAseq using `megahit` and `metaphlan4` pipeline
 
 ## Overview of the workflow
 
-1. Rename fastq files. 
-   - e.g. `GC.TN.1436_***.fastq.gz -> CRIS72_***.fastq.gz`
+1. Create a samplesheet file to execute the pipeline which should be a csv file following the format below:
+
+| sample  | fq1                 | fq2                 |
+| ------- | ------------------- | ------------------- |
+| sampleA | sampleA_R1.fastq.gz | sampleA_R2.fastq.gz |
+
 2. Run QC tools
    1. `fastqc` on each sample - raw fastq files 
    2. `fastp` to trim adapter sequences and low quality reads
       1. below options used for `fastp`
-         - `--detect_adapter_for_pe`
          - `--qualified_quality_phred 20`
          - `--adapter_fasta $adapter`
-   
-3. `multiqc` for summarizing the outputs of qc tools
+   3. `fastq_screen` on R1 fastq files to detect possible contaminants.   
+3. `multiqc` for summarizing the output files of the qc tools
 4. Removal of host genome using `bowtie2` 
    - i.e. align reads against host genome.
      1. below options used for `bowtie2` and `samtools`
@@ -22,32 +25,15 @@
      5. `sample_host_remove.R[12].fastq.gz` files are host removed fastq files
      6. [referece](https://www.metagenomics.wiki/tools/short-read/remove-host-sequences) 
 5. Obtain host genome filtered reads (`host_remove.R[12].fastq.gz`) / unfiltered reads (fastp output)
-6. Genome assebmly using megahit using trimmed reads from raw fastq files - fastp output files. - Not `host_remove.fastq.gz` files
-   - `final_contigs.fa` obtained.
-   - `--k-min 27 --k-max 47` options used.
-7. Gene annotation using prokka
-    - Execute prokka - `final_contigs.fa` as input
-    - default option used
+6. Genome assembly using `megahit` using the host sequences filtered reads with `--k-min 27 --k-max 47` option.
+7. microbe classification using `metaphlan4` on host genome filtered reads with `-t rel_ab_w_read_stats` option.
 
-## Visual of the workflow
-
+## How to execute the pipeline
+Adjust the configureation files such as `metaphlan4_conf/run.config and cluster.config` After that, 
+```
+sbatch run_metaphlan4.slurm
+```
 
 ## Dependency
 
-`Nextflow`
-
-`bowtie2`
-
-`samtools`
-
-`fastqc`
-
-`fastp`
-
-`multiqc`
-
-`megahit`
-
-`prokka`
-
-`singularity`
+`slurm` `Nextflow` `bowtie2` `samtools` `fastqc` `fastp` `multiqc` `megahit` `metaphlan4` `singularity`
