@@ -1,0 +1,19 @@
+#! /usr/bin/env bash
+
+#partition - defq, bigmem and xtreme
+#SBATCH --job-name=metaphlan
+#SBATCH --ntasks=1
+#SBATCH --partition=defq
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=1G
+#SBATCH --time=36:00:00
+#SBATCH -o metaphlan.%A.o
+#SBATCH -e metaphlan.%A.e
+
+module load nextflow/23.0.4.1
+module load singularity/3.8.0
+
+nextflow run metaphlan4.nf -c ./metaphlan4_conf/run.config -resume -profile slurm
+
+module unload nextflow/23.0.4.1
+module unload singularity/3.8.0
