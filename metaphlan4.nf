@@ -348,7 +348,7 @@ workflow {
             megahit(split_reads_from_unmapped.out.split_reads)
         }
         if (params.run_humann) {
-            concat_fq(fastp.out.trim_reads)
+            concat_fq(split_reads_from_unmapped.out.split_reads)
             humann(concat_fq.out.concat_reads)
         }
     } else {

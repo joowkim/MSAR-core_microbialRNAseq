@@ -1,4 +1,4 @@
-# Microbial RNAseq using `megahit` and `metaphlan4` pipeline
+# Microbial RNAseq using `megahit, metaphlan4` and `humann3` pipeline
 
 ## Overview of the workflow
 
@@ -27,6 +27,11 @@
 5. Obtain host genome filtered reads (`host_remove.R[12].fastq.gz`) / unfiltered reads (fastp output)
 6. Genome assembly using `megahit` using the host sequences filtered reads with `--k-min 27 --k-max 47` option.
 7. microbe classification using `metaphlan4` on host genome filtered reads with `-t rel_ab_w_read_stats` option.
+8. concatenate host sequence filtered reads fastq files for `humann3` 
+   - i.e.`cat sample1_R1.fastq.gz sample1_R2.fastq.gz > sample1.concat.fastq.gz`
+   - see [reference](https://forum.biobakery.org/t/humann3-paired-end-reads/862)
+9. Run `humann3` on concatenated fastq files
+
 
 ## How to execute the pipeline
 Adjust the configureation files such as `metaphlan4_conf/run.config and cluster.config` After that, 
