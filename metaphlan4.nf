@@ -170,7 +170,7 @@ process split_reads_from_unmapped {
     cpus 12
     memory '32 GB'
 
-    publishDir "${launchDir}/analysis/split_reads", mode: "copy"
+    publishDir "${launchDir}/analysis/split_reads"
 
     module "samtools/1.16.1"
 
@@ -285,8 +285,8 @@ process humann {
     debug true
     tag "humann on ${sample_name}"
 
-    cpus 16
-    memory '150 GB'
+    cpus 12
+    memory '160 GB'
 
     publishDir "${launchDir}/analysis/humann", mode : "copy"
 
