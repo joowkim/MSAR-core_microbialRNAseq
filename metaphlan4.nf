@@ -1,11 +1,8 @@
 nextflow.enable.dsl=2
 
 process fastp {
-    debug true
     tag "${meta.sample_name}"
-    // label "universal"
-    cpus 10
-    memory '24 GB'
+    label "process_medium"
 
     publishDir "${launchDir}/analysis/fastp/"
 
@@ -47,11 +44,8 @@ process fastp {
 
 
 process fastqc {
-    debug true
     tag "Fastqc on ${meta.sample_name}"
-    //label "universal" // getting cpu and memory usage from salmon.config - called universal
-    cpus 8
-    memory '8 GB'
+    label "process_low"
 
     publishDir "${launchDir}/analysis/fastqc/", mode: "copy"
 
@@ -72,11 +66,8 @@ process fastqc {
 
 
 process multiqc {
-    debug true
     tag "Multiqc on this project"
-
-    cpus 2
-    memory '2 GB'
+    label "process_dual"
 
     publishDir "${launchDir}/analysis/multiqc/", mode : "copy"
 
@@ -89,17 +80,14 @@ process multiqc {
     script:
     config_yaml = "/home/kimj32/config_defaults.yaml"
     """
-    multiqc ${files} --filename "multiqc_report.metaphlan4.html" --config ${config_yaml}
+    multiqc ${files} --filename "multiqc_report.html" --config ${config_yaml}
     """
 }
 
 
 process fastq_screen {
-    debug true
     tag "Fastq-screen on ${sample_name}"
-
-    cpus 8
-    memory '16 GB'
+    label "process_low"
 
     publishDir "${launchDir}/analysis/fastq_screen"
 
@@ -127,11 +115,8 @@ process fastq_screen {
 
 
 process bowtie2 {
-    debug true
     tag "bowtie2 on ${sample_name}"
-
-    cpus 12
-    memory '64 GB'
+    label "process_high"
 
     publishDir "${launchDir}/analysis/bowtie2"
 
@@ -164,11 +149,8 @@ process bowtie2 {
 
 
 process split_reads_from_unmapped {
-    debug true
     tag "split reads - ${sample_name}"
-
-    cpus 12
-    memory '32 GB'
+    label "process_medium"
 
     publishDir "${launchDir}/analysis/split_reads"
 
@@ -192,11 +174,8 @@ process split_reads_from_unmapped {
 
 
 process metaphlan {
-    debug true
     tag "metaphlan on ${sample_name}"
-
-    cpus 12
-    memory '128 GB'
+    label "memory_medium"
 
     publishDir "${launchDir}/analysis/metaphlan", mode : "copy"
 
@@ -226,12 +205,9 @@ process metaphlan {
 
 
 process concat_fq {
-// See https://forum.biobakery.org/t/humann3-paired-end-reads/862
-    debug true
-    tag "concat ${sample_name} "
-
-    cpus 2
-    memory "2 GB"
+    // See https://forum.biobakery.org/t/humann3-paired-end-reads/862
+    tag "concat ${sample_name}"
+    label "process_dual"
 
     publishDir "${launchDir}/analysis/concat"
 
@@ -249,11 +225,8 @@ process concat_fq {
 
 
 process megahit {
-    debug true
     tag "${sample_name}"
-
-    cpus 12
-    memory '64 GB'
+    label "memory_medium"
 
     publishDir (
         path: "${launchDir}/analysis/megahit",
@@ -282,11 +255,8 @@ process megahit {
 
 
 process humann {
-    debug true
     tag "humann on ${sample_name}"
-
-    cpus 12
-    memory '160 GB'
+    label "memory_high"
 
     publishDir "${launchDir}/analysis/humann", mode : "copy"
 
@@ -338,7 +308,7 @@ workflow {
         fastq_screen(fastp.out.trim_reads)
         bowtie2(fastp.out.trim_reads)
         split_reads_from_unmapped(bowtie2.out.bowtie2_bam_both_unmapped_bam)
-        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json).collect() )
+        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats).collect() )
         if (params.run_metaphlan) {
             //metaphlan(fastp.out.trim_reads)
             metaphlan(split_reads_from_unmapped.out.split_reads)
