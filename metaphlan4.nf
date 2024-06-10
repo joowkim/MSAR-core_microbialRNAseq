@@ -242,6 +242,7 @@ process megahit {
     output:
     path("${sample_name}", type: "dir")
     tuple val(sample_name), path("${sample_name}/final.contigs.fa"), emit: final_contigs_fa
+    path("${sample_name}.*.log"), emit: "log"
 
     script:
     """
@@ -249,7 +250,9 @@ process megahit {
         -o ${sample_name} \
         -t ${task.cpus} \
         --k-min 27 \
-        --k-max 47
+        --k-max 47 \
+        1> ${sample_name}.stdout.log \
+        2> ${sample_name}.stderr.log
     """
 }
 
@@ -278,6 +281,34 @@ process humann {
     """
 }
 
+
+process kraken2{
+    tag "kraken2 on ${sample_name}"
+    label "process_high"
+
+    publishDir "${launchDir}/analysis/kraken2"
+
+    module "kraken/2.1.2"
+
+    input:
+    tuple val(sample_name), path(reads), val(is_SE)
+
+    output:
+    path("*"), emit: kraken2_output
+
+    script:
+    def kraken2_db = "/mnt/beegfs/kimj32/reference/KRAKEN_DB"
+    """
+        kraken2 --db ${kraken2_db} \
+        --threads ${task.cpus} \
+        --use-names \
+        --output ${sample_name}_kraken.txt \
+        --report ${sample_name}_report.txt \
+        --paired \
+        ${reads}
+     """
+}
+
 // See https://bioinformatics.stackexchange.com/questions/20227/how-does-one-account-for-both-single-end-and-paired-end-reads-as-input-in-a-next
 ch_samplesheet = Channel.fromPath(params.samplesheet, checkIfExists: true)
 
@@ -302,28 +333,29 @@ ch_reads = ch_samplesheet.splitCsv(header:true).map {
 workflow {
     // samplesheet applied // ch_reads = Channel.fromFilePairs(params.reads, checkIfExists: true)
     fastqc(ch_reads)
+    fastp(ch_reads)
+    fastq_screen(fastp.out.trim_reads)
+    bowtie2(fastp.out.trim_reads)
+    split_reads_from_unmapped(bowtie2.out.bowtie2_bam_both_unmapped_bam)
 
-    if (params.run_fastp) {
-        fastp(ch_reads)
-        fastq_screen(fastp.out.trim_reads)
-        bowtie2(fastp.out.trim_reads)
-        split_reads_from_unmapped(bowtie2.out.bowtie2_bam_both_unmapped_bam)
-        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats).collect() )
-        if (params.run_metaphlan) {
-            //metaphlan(fastp.out.trim_reads)
-            metaphlan(split_reads_from_unmapped.out.split_reads)
-        }
-        if (params.run_megahit) {
-            //megahit(fastp.out.trim_reads)
-            megahit(split_reads_from_unmapped.out.split_reads)
-        }
-        if (params.run_humann) {
-            concat_fq(split_reads_from_unmapped.out.split_reads)
-            humann(concat_fq.out.concat_reads)
-        }
-    } else {
-        fastq_screen(ch_reads)
-        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips).collect() )
+
+    if (params.run_metaphlan) {
+        //metaphlan(fastp.out.trim_reads)
+        metaphlan(split_reads_from_unmapped.out.split_reads)
+    }
+    if (params.run_megahit) {
+        //megahit(fastp.out.trim_reads)
+        megahit(split_reads_from_unmapped.out.split_reads)
+        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats, megahit.out.log).collect() )
+    }
+    if (params.run_humann) {
+        concat_fq(split_reads_from_unmapped.out.split_reads)
+        humann(concat_fq.out.concat_reads)
+    }
+
+    if (params.run_kraken2) {
+        kraken2(split_reads_from_unmapped.out.split_reads)
+        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats, kraken2.out.kraken2_output).collect() )
     }
 }
 
