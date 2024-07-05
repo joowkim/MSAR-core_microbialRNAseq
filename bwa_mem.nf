@@ -2,11 +2,8 @@ nextflow.enable.dsl=2
 
 
 process fastp {
-    debug true
     tag "${meta.sample_name}"
-    // label "universal"
-    cpus 12
-    memory '32 GB'
+    label "process_medium"
 
     publishDir "${launchDir}/analysis/fastp/"
 
@@ -16,7 +13,7 @@ process fastp {
     tuple val(meta), path(reads)
 
     output:
-    tuple val(meta.sample_name), path("${meta.sample_name}_trimmed_R*.fastq.gz"), val(meta.single_end), emit: trim_reads
+    tuple val(meta.sample_name), path("${meta.sample_name}_trimmed_R{1,2}.fastq.gz"), val(meta.single_end), emit: trim_reads
     path("${meta.sample_name}.fastp.json"), emit: fastp_json
 
     script:
@@ -48,11 +45,8 @@ process fastp {
 
 
 process fastqc {
-    debug true
     tag "Fastqc on ${meta.sample_name}"
-    //label "universal" // getting cpu and memory usage from salmon.config - called universal
-    cpus 12
-    memory '32 GB'
+    label "process_low"
 
     publishDir "${launchDir}/analysis/fastqc/", mode: "copy"
 
@@ -73,11 +67,8 @@ process fastqc {
 
 
 process multiqc {
-    debug true
     tag "Multiqc on this project"
-
-    cpus 2
-    memory '2 GB'
+    label "process_dual"
 
     publishDir "${launchDir}/analysis/multiqc/", mode : "copy"
 
@@ -96,11 +87,8 @@ process multiqc {
 
 
 process fastq_screen {
-    debug true
     tag "Fastq-screen on ${sample_name}"
-
-    cpus 8
-    memory '16 GB'
+    label "process_low"
 
     publishDir "${launchDir}/analysis/fastq_screen"
 
@@ -128,11 +116,8 @@ process fastq_screen {
 
 
 process bwa_mem {
-    debug true
     tag "${sample_name}"
-
-    cpus 10
-    memory '32 GB'
+   label "process_medium"
 
     publishDir "${launchDir}/analysis/bwa_mem"
 
@@ -155,23 +140,17 @@ process bwa_mem {
      ${index} \
      ${reads} \
      | samtools sort \
-     -@ 4 \
-     -m 6G \
      -O "BAM" \
      -o ${sample_name}.bam -
     """
 }
 
 process samtools {
-    debug true
     tag "${sample_name}"
+    label "process_medium"
 
     publishDir "${launchDir}/analysis/samtools_stat", mode:"copy"
-
     module "samtools/1.16.1"
-
-    cpus 12
-    memory '16 GB'
 
     input:
     tuple val(sample_name), path(bam)
@@ -191,6 +170,63 @@ process samtools {
 
 }
 
+process bowtie2 {
+    tag "bowtie2 on ${sample_name}"
+    label "process_medium"
+
+    publishDir "${launchDir}/analysis/bowtie2"
+
+    module 'bowtie2/2.3.4.1'
+    module "samtools/1.16.1"
+
+    input:
+    tuple val(sample_name), path(reads), val(is_SE)
+
+    output:
+    tuple val(sample_name), path("${sample_name}.mapped_unmapped.bam"), emit: bowtie2_mapped_unmapped_bam
+    tuple val(sample_name), path("${sample_name}.both_unmapped.bam"), val(is_SE), emit: bowtie2_bam_both_unmapped_bam
+    path("${sample_name}.mapped_unmapped.stats"), emit: samtools_stats
+
+    script:
+    index = "/mnt/beegfs/kimj32/reference/mouse/gencode/GRCm38.p6/indexes/bowtie2/mouse"
+    """
+    bowtie2 -p ${task.cpus} -x ${index} \
+    -1 ${reads[0]} -2 ${reads[1]} \
+    | samtools sort -@ 4 -O BAM -o ${sample_name}.mapped_unmapped.bam
+
+    samtools index -@ 4 ${sample_name}.mapped_unmapped.bam
+    samtools stats -@ 4 ${sample_name}.mapped_unmapped.bam > ${sample_name}.mapped_unmapped.stats
+
+    samtools view -@ 4 -b -f 12 -F 256 \
+    ${sample_name}.mapped_unmapped.bam > ${sample_name}.both_unmapped.bam
+
+    """
+}
+
+
+process split_reads_from_unmapped {
+    tag "split reads - ${sample_name}"
+    label "process_medium"
+
+    publishDir "${launchDir}/analysis/split_reads"
+
+    module "samtools/1.16.1"
+
+    input:
+    tuple val(sample_name), path(bam_file), val(is_SE)
+
+    output:
+    tuple val(sample_name), path("${sample_name}.host_remove.R{1,2}.fastq.gz"), val(is_SE),  emit: split_reads
+
+    script:
+    """
+    samtools sort -n ${bam_file} -o ${sample_name}.sorted.bam
+    samtools fastq -@ 10 ${sample_name}.sorted.bam \
+        -1 ${sample_name}.host_remove.R1.fastq.gz \
+        -2 ${sample_name}.host_remove.R2.fastq.gz \
+        -0 /dev/null -s /dev/null -n
+    """
+}
 
 // See https://bioinformatics.stackexchange.com/questions/20227/how-does-one-account-for-both-single-end-and-paired-end-reads-as-input-in-a-next
 ch_samplesheet = Channel.fromPath(params.samplesheet, checkIfExists: true)
@@ -218,8 +254,10 @@ workflow {
     fastqc(ch_reads)
     fastp(ch_reads)
     fastq_screen(fastp.out.trim_reads)
+    bowtie2(fastp.out.trim_reads)
+    split_reads_from_unmapped(bowtie2.out.bowtie2_bam_both_unmapped_bam)
     // ch_reference = Channel.value(params.index)
-    bwa_mem(fastp.out.trim_reads)
+    bwa_mem(split_reads_from_unmapped.out.split_reads)
     samtools(bwa_mem.out.bam_file)
     multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, samtools.out.stats_out).collect() )
 }

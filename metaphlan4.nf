@@ -12,7 +12,7 @@ process fastp {
     tuple val(meta), path(reads)
 
     output:
-    tuple val(meta.sample_name), path("${meta.sample_name}_trimmed_R*.fastq.gz"), val(meta.single_end), emit: trim_reads
+    tuple val(meta.sample_name), path("${meta.sample_name}_trimmed_R{1,2}.fastq.gz"), val(meta.single_end), emit: trim_reads
     path("${meta.sample_name}.fastp.json"), emit: fastp_json
 
     script:

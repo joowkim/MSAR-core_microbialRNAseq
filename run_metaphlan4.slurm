@@ -6,7 +6,7 @@
 #SBATCH --partition=defq
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=2G
-#SBATCH --time=72:00:00
+#SBATCH --time=168:00:00
 #SBATCH -o slurm.%A.o
 #SBATCH -e slurm.%A.e
 
