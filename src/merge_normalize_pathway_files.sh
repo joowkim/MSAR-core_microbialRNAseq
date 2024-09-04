@@ -1,4 +1,6 @@
-set -eou pipefail
+mkdir -p tmp_out
+
+find -name "*_humann_temp" -type d  -exec mv {} tmp_out \;
 
 module load HUMAnN/3.0
 

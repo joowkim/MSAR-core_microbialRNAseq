@@ -19,26 +19,26 @@ process fastp {
     def adapter = "/mnt/beegfs/kimj32/reference/adapters.fa"
     if(!meta.single_end) {
     """
-    fastp \
-    -i ${reads[0]} \
-    -I ${reads[1]} \
-    --thread ${task.cpus} \
-    --qualified_quality_phred 20 \
-    -o ${meta.sample_name}_trimmed_R1.fastq.gz \
-    -O ${meta.sample_name}_trimmed_R2.fastq.gz \
-    --adapter_fasta $adapter \
-    --json ${meta.sample_name}.fastp.json
+        fastp \
+        -i ${reads[0]} \
+        -I ${reads[1]} \
+        --thread ${task.cpus} \
+        --qualified_quality_phred 20 \
+        -o ${meta.sample_name}_trimmed_R1.fastq.gz \
+        -O ${meta.sample_name}_trimmed_R2.fastq.gz \
+        --adapter_fasta $adapter \
+        --json ${meta.sample_name}.fastp.json
     """
     } else {
     """
-    fastp \
-    -i ${reads} \
-    --thread ${task.cpus} \
-    --qualified_quality_phred 20 \
-    -o ${meta.sample_name}_trimmed_R1.fastq.gz \
-    --adapter_fasta $adapter \
-    --json ${meta.sample_name}.fastp.json
-    """
+        fastp \
+        -i ${reads} \
+        --thread ${task.cpus} \
+        --qualified_quality_phred 20 \
+        -o ${meta.sample_name}_trimmed_R1.fastq.gz \
+        --adapter_fasta $adapter \
+        --json ${meta.sample_name}.fastp.json
+        """
     }
 }
 
@@ -60,7 +60,7 @@ process fastqc {
 
     script:
     """
-    fastqc --threads ${task.cpus} ${reads}
+        fastqc --threads ${task.cpus} ${reads}
     """
 }
 
@@ -80,7 +80,7 @@ process multiqc {
     script:
     config_yaml = "/home/kimj32/config_defaults.yaml"
     """
-    multiqc ${files} --filename "multiqc_report.html" --config ${config_yaml}
+        multiqc ${files} --filename "multiqc_report.html" --config ${config_yaml}
     """
 }
 
@@ -105,11 +105,11 @@ process fastq_screen {
     script:
     conf = "/mnt/beegfs/kimj32/polymerase/polymeraseDependencies/FastQ_Screen_Genomes/fastq_screen.conf"
     """
-    fastq_screen --aligner bowtie2 \
-    --conf ${conf} \
-    ${reads[0]} \
-    --outdir ./  \
-    --threads ${task.cpus}
+        fastq_screen --aligner bowtie2 \
+        --conf ${conf} \
+        ${reads[0]} \
+        --outdir ./  \
+        --threads ${task.cpus}
     """
 }
 
@@ -134,15 +134,15 @@ process bowtie2 {
     script:
     index = "/mnt/beegfs/kimj32/reference/mouse/gencode/GRCm38.p6/indexes/bowtie2/mouse"
     """
-    bowtie2 -p ${task.cpus} -x ${index} \
-    -1 ${reads[0]} -2 ${reads[1]} \
-    | samtools sort -@ 4 -O BAM -o ${sample_name}.mapped_unmapped.bam
+        bowtie2 -p ${task.cpus} -x ${index} \
+        -1 ${reads[0]} -2 ${reads[1]} \
+        | samtools sort -O BAM -o ${sample_name}.mapped_unmapped.bam
 
-    samtools index -@ 4 ${sample_name}.mapped_unmapped.bam
-    samtools stats -@ 4 ${sample_name}.mapped_unmapped.bam > ${sample_name}.mapped_unmapped.stats
+        samtools index -@ 4 ${sample_name}.mapped_unmapped.bam
+        samtools stats -@ 4 ${sample_name}.mapped_unmapped.bam > ${sample_name}.mapped_unmapped.stats
 
-    samtools view -@ 4 -b -f 12 -F 256 \
-    ${sample_name}.mapped_unmapped.bam > ${sample_name}.both_unmapped.bam
+        samtools view -@ 4 -b -f 12 -F 256 \
+        ${sample_name}.mapped_unmapped.bam > ${sample_name}.both_unmapped.bam
 
     """
 }
@@ -164,11 +164,11 @@ process split_reads_from_unmapped {
 
     script:
     """
-    samtools sort -n ${bam_file} -o ${sample_name}.sorted.bam
-    samtools fastq -@ 10 ${sample_name}.sorted.bam \
-        -1 ${sample_name}.host_remove.R1.fastq.gz \
-        -2 ${sample_name}.host_remove.R2.fastq.gz \
-        -0 /dev/null -s /dev/null -n
+        samtools sort -n ${bam_file} -o ${sample_name}.sorted.bam
+        samtools fastq -@ 10 ${sample_name}.sorted.bam \
+            -1 ${sample_name}.host_remove.R1.fastq.gz \
+            -2 ${sample_name}.host_remove.R2.fastq.gz \
+            -0 /dev/null -s /dev/null -n
     """
 }
 
@@ -192,14 +192,14 @@ process metaphlan {
     def bowtie2db = "/mnt/beegfs/kimj32/reference/metaphlan4/metaphlan_databases/"
     // def bowtie2db = "/mnt/beegfs/root/MetaPhlAn/" // this is from the HPC - directory is not writable
     """
-    metaphlan ${reads[0]},${reads[1]} \
-    --nproc ${task.cpus} \
-    --input_type fastq \
-    -x mpa_vOct22_CHOCOPhlAnSGB_202212 \
-    --bowtie2db  ${bowtie2db} \
-    -t rel_ab_w_read_stats \
-    -o ${sample_name}.profiled_metagenome.txt \
-    --bowtie2out ${sample_name}.bowtie2.bz2
+        metaphlan ${reads[0]},${reads[1]} \
+        --nproc ${task.cpus} \
+        --input_type fastq \
+        -x mpa_vOct22_CHOCOPhlAnSGB_202212 \
+        --bowtie2db  ${bowtie2db} \
+        -t rel_ab_w_read_stats \
+        -o ${sample_name}.profiled_metagenome.txt \
+        --bowtie2out ${sample_name}.bowtie2.bz2
     """
 }
 
@@ -219,7 +219,7 @@ process concat_fq {
 
     script:
     """
-    cat ${reads[0]} ${reads[1]} >   ${sample_name}.concat.fastq.gz
+        cat ${reads[0]} ${reads[1]} >   ${sample_name}.concat.fastq.gz
     """
 }
 
@@ -246,13 +246,13 @@ process megahit {
 
     script:
     """
-    megahit -1 ${reads[0]} -2 ${reads[1]} \
-        -o ${sample_name} \
-        -t ${task.cpus} \
-        --k-min 27 \
-        --k-max 47 \
-        1> ${sample_name}.stdout.log \
-        2> ${sample_name}.stderr.log
+        megahit -1 ${reads[0]} -2 ${reads[1]} \
+            -o ${sample_name} \
+            -t ${task.cpus} \
+            --k-min 27 \
+            --k-max 47 \
+            1> ${sample_name}.stdout.log \
+            2> ${sample_name}.stderr.log
     """
 }
 
@@ -272,12 +272,19 @@ process humann {
     output:
     path("*")
 
+    // --nucleotide-database : /mnt/beegfs/kimj32/reference/Humann/chocophlan
+    // --protein-database : /mnt/beegfs/kimj32/reference/Humann/uniref
+    // /cm/shared/apps/MetaPhlAn/4.0/envs/mpa/bin/metaphlan
     script:
+    def nucl_db = "/mnt/beegfs/kimj32/reference/Humann/chocophlan"
+    def prot_db = "/mnt/beegfs/kimj32/reference/Humann/uniref"
+    def bowtie2_db = "/cm/shared/apps/HUMAnN/3.0/lib/python3.9/site-packages/metaphlan/metaphlan_databases"
     """
-    humann --input ${reads} \
-    --threads ${task.cpus} \
-    --memory-use maximum \
-    -o ${sample_name}_humann_out
+        humann --input ${reads} \
+        --threads ${task.cpus} \
+        --memory-use maximum \
+        -o ${sample_name}_humann_out \
+        --metaphlan-options "--bowtie2db ${bowtie2_db} --offline"
     """
 }
 

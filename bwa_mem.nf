@@ -81,7 +81,7 @@ process multiqc {
     script:
     config_yaml = "/home/kimj32/config_defaults.yaml"
     """
-    multiqc ${files} --filename "multiqc_report.metaphlan4.html" --config ${config_yaml}
+    multiqc ${files} --filename "multiqc_report.html" --config ${config_yaml}
     """
 }
 
@@ -132,7 +132,8 @@ process bwa_mem {
 
     // -M: mark shorter split hits as secondary
     script:
-    def index = "/mnt/beegfs/kimj32/reference/Marker_genes/cutC_D.fasta"
+    def index = params.bwa_index
+    //def index = "/mnt/beegfs/kimj32/reference/Marker_genes/cutC_D.fasta"
     // def index = "/mnt/beegfs/kimj32/reference/Marker_genes/gbuA.fasta"
     """
     bwa mem -M \
@@ -192,7 +193,7 @@ process bowtie2 {
     """
     bowtie2 -p ${task.cpus} -x ${index} \
     -1 ${reads[0]} -2 ${reads[1]} \
-    | samtools sort -@ 4 -O BAM -o ${sample_name}.mapped_unmapped.bam
+    | samtools sort -O BAM -o ${sample_name}.mapped_unmapped.bam
 
     samtools index -@ 4 ${sample_name}.mapped_unmapped.bam
     samtools stats -@ 4 ${sample_name}.mapped_unmapped.bam > ${sample_name}.mapped_unmapped.stats
