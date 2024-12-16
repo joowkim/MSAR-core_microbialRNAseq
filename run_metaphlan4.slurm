@@ -13,6 +13,8 @@
 module load nextflow/23.0.4.1
 module load singularity/3.8.0
 
+module unload python
+
 nextflow run metaphlan4.nf -c ./metaphlan4_conf/run.config -resume -profile slurm
 
 module unload nextflow/23.0.4.1

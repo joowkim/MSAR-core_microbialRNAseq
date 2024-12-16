@@ -15,6 +15,7 @@ process fastp {
     tuple val(meta.sample_name), path("${meta.sample_name}_trimmed_R{1,2}.fastq.gz"), val(meta.single_end), emit: trim_reads
     path("${meta.sample_name}.fastp.json"), emit: fastp_json
 
+    // --trim_front2 1
     script:
     def adapter = "/mnt/beegfs/kimj32/reference/adapters.fa"
     if(!meta.single_end) {
@@ -27,8 +28,6 @@ process fastp {
         -o ${meta.sample_name}_trimmed_R1.fastq.gz \
         -O ${meta.sample_name}_trimmed_R2.fastq.gz \
         --adapter_fasta $adapter \
-        --trim_front1 1 \
-        --trim_front2 1 \
         --json ${meta.sample_name}.fastp.json
     """
     } else {
@@ -39,7 +38,6 @@ process fastp {
         --qualified_quality_phred 20 \
         -o ${meta.sample_name}_trimmed_R1.fastq.gz \
         --adapter_fasta $adapter \
-        --trim_front1 1 \
         --json ${meta.sample_name}.fastp.json
         """
     }
@@ -168,7 +166,7 @@ process split_reads_from_unmapped {
     script:
     """
         samtools sort -n ${bam_file} -o ${sample_name}.sorted.bam
-        samtools fastq -@ 10 ${sample_name}.sorted.bam \
+        samtools fastq -@ 6 ${sample_name}.sorted.bam \
             -1 ${sample_name}.host_remove.R1.fastq.gz \
             -2 ${sample_name}.host_remove.R2.fastq.gz \
             -0 /dev/null -s /dev/null -n
@@ -319,6 +317,62 @@ process kraken2{
      """
 }
 
+
+// https://github.com/biobakery/MetaPhlAn/wiki/StrainPhlAn-4.1
+process StrainPhlAn{
+    tag "StrainPhlAn on ${sample_name}"
+    label "memory_medium"
+
+    publishDir "${launchDir}/analysis/StrainPhlAn"
+
+    module "MetaPhlAn/4.1.1"
+    module 'bowtie2/2.3.4.1'
+    // singularity
+
+    input:
+    tuple val(sample_name), path(reads), val(is_SE)
+
+    output:
+    // path("*")
+    tuple val(sample_name), path("${sample_name}.sam.bz2"), emit: StrainPhlAn_sam_bz2
+
+    script:
+    def bowtie2db = "/mnt/beegfs/kimj32/reference/metaphlan4/metaphlan_databases/"
+    // def bowtie2db = "/mnt/beegfs/root/MetaPhlAn/" // this is from the HPC - directory is not writable
+    """
+        metaphlan ${reads[0]},${reads[1]} \
+        --nproc ${task.cpus} \
+        --input_type fastq \
+        -s ${sample_name}.sam.bz2 \
+        -o ${sample_name}.profiled.tsv \
+        --bowtie2out ${sample_name}.bowtie2.bz2
+    """
+}
+
+
+process concensus_markers {
+    tag "concensus_markers on ${sample_name}"
+    label "memory_medium"
+
+    publishDir "${launchDir}/analysis/concensus_markers", mode : "copy"
+
+    module "MetaPhlAn/4.0"
+    module 'bowtie2/2.3.4.1'
+
+    input:
+    tuple val(sample_name), path(StrainPhlAn_sam_bz2)
+
+    output:
+    path("consensus_markers")
+
+    script:
+    """
+        sample2markers.py -i ${StrainPhlAn_sam_bz2} -o consensus_markers -n ${task.cpus}
+    """
+
+
+}
+
 // See https://bioinformatics.stackexchange.com/questions/20227/how-does-one-account-for-both-single-end-and-paired-end-reads-as-input-in-a-next
 ch_samplesheet = Channel.fromPath(params.samplesheet, checkIfExists: true)
 
@@ -366,6 +420,10 @@ workflow {
     if (params.run_kraken2) {
         kraken2(split_reads_from_unmapped.out.split_reads)
         multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats, kraken2.out.kraken2_output).collect() )
+    }
+
+    if (params.run_StrainPhlAn) {
+        StrainPhlAn(split_reads_from_unmapped.out.split_reads)
     }
 }
 
