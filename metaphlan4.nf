@@ -4,7 +4,7 @@ process fastp {
     tag "${meta.sample_name}"
     label "process_medium"
 
-    publishDir "${launchDir}/analysis/fastp/"
+    publishDir "${launchDir}/analysis/fastp/", mode : "copy"
 
     module 'fastp/0.21.0'
 
@@ -90,7 +90,7 @@ process fastq_screen {
     tag "Fastq-screen on ${sample_name}"
     label "process_low"
 
-    publishDir "${launchDir}/analysis/fastq_screen"
+    publishDir "${launchDir}/analysis/fastq_screen", mode : "copy"
 
     module 'FastQScreen/0.14.1'
     module 'bowtie2/2.3.4.1'
