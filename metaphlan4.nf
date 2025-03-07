@@ -24,7 +24,6 @@ process fastp {
         -i ${reads[0]} \
         -I ${reads[1]} \
         --thread ${task.cpus} \
-        --qualified_quality_phred 20 \
         -o ${meta.sample_name}_trimmed_R1.fastq.gz \
         -O ${meta.sample_name}_trimmed_R2.fastq.gz \
         --adapter_fasta $adapter \
@@ -35,7 +34,6 @@ process fastp {
         fastp \
         -i ${reads} \
         --thread ${task.cpus} \
-        --qualified_quality_phred 20 \
         -o ${meta.sample_name}_trimmed_R1.fastq.gz \
         --adapter_fasta $adapter \
         --json ${meta.sample_name}.fastp.json
