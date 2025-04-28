@@ -280,6 +280,7 @@ process humann {
     def nucl_db = "/mnt/beegfs/kimj32/reference/Humann/chocophlan"
     def prot_db = "/mnt/beegfs/kimj32/reference/Humann/uniref"
     def bowtie2_db = "/cm/shared/apps/HUMAnN/3.0/lib/python3.9/site-packages/metaphlan/metaphlan_databases"
+    // def cpus = task.cpus - 2
     """
         humann --input ${reads} \
         --threads ${task.cpus} \
