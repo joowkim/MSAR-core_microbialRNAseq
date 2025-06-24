@@ -2,8 +2,8 @@ set -euo pipefail
 
 
 ## go to the analysis -> kraken2 folder.
-module load python/3.9.5
+source ~/beegfs/python_env/kraken2/bin/activate
 
 kraken-biom *report.txt --fmt tsv --gzip -o biom_table.tsv
 
-module unload python/3.9.5
+deactivate
