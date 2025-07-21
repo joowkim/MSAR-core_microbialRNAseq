@@ -10,9 +10,9 @@
 #SBATCH -o slurm.%A.o
 #SBATCH -e slurm.%A.e
 
-module unload nextflow/23.10.0
-module unload singularity/3.8.0
-module unload java/21.0.6
+module load nextflow/23.10.0
+module load singularity/3.8.0
+module load java/21.0.6
 
 nextflow run bwa_mem.nf -c ./bwa_mem_conf/run.config -resume -profile slurm
 
