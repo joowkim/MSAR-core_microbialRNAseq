@@ -187,7 +187,7 @@ process bowtie2 {
     path("${sample_name}.mapped_unmapped.stats"), emit: samtools_stats
 
     script:
-    index = "/mnt/beegfs/kimj32/reference/mouse/gencode/GRCm38.p6/indexes/bowtie2/mouse"
+    index = params.bowtie2.(params.genome)
     """
     bowtie2 -p ${task.cpus} -x ${index} \
     -1 ${reads[0]} -2 ${reads[1]} \
