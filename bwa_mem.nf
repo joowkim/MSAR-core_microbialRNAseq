@@ -79,7 +79,7 @@ process multiqc {
     script:
     config_yaml = "/home/kimj32/config_defaults.yaml"
     """
-    multiqc ${files} --filename "multiqc_report.html" --config ${config_yaml}
+    multiqc ${files} --filename "multiqc_report.html"
     """
 }
 
@@ -187,7 +187,7 @@ process bowtie2 {
     path("${sample_name}.mapped_unmapped.stats"), emit: samtools_stats
 
     script:
-    index = params.bowtie2.(params.genome)
+    index = params.bowtie2.(params.host_genome)
     """
     bowtie2 -p ${task.cpus} -x ${index} \
     -1 ${reads[0]} -2 ${reads[1]} \
