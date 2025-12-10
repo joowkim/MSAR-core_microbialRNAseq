@@ -7,7 +7,7 @@ process fastp {
 
     publishDir "${launchDir}/analysis/fastp/"
 
-    module 'fastp/0.21.0'
+    module "fastp/1.0.1"
 
     input:
     tuple val(meta), path(reads)
