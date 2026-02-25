@@ -18,6 +18,7 @@ process fastp {
     // --trim_front2 1
     script:
     def adapter = "/mnt/beegfs/kimj32/reference/adapters.fa"
+    //--adapter_fasta $adapter \
     if(!meta.single_end) {
     """
         fastp \
@@ -26,7 +27,6 @@ process fastp {
         --thread ${task.cpus} \
         -o ${meta.sample_name}_trimmed_R1.fastq.gz \
         -O ${meta.sample_name}_trimmed_R2.fastq.gz \
-        --adapter_fasta $adapter \
         --json ${meta.sample_name}.fastp.json
     """
     } else {
@@ -35,7 +35,6 @@ process fastp {
         -i ${reads} \
         --thread ${task.cpus} \
         -o ${meta.sample_name}_trimmed_R1.fastq.gz \
-        --adapter_fasta $adapter \
         --json ${meta.sample_name}.fastp.json
         """
     }
