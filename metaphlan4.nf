@@ -133,6 +133,7 @@ process bowtie2 {
     path("${sample_name}.mapped_unmapped.stats"), emit: samtools_stats
 
     script:
+    // https://www.metagenomics.wiki/tools/short-read/remove-host-sequences#h.p2wn17ntls79
     index = params.bowtie2.(params.genome)
     """
         bowtie2 -p ${task.cpus} -x ${index} \

@@ -169,63 +169,80 @@ process samtools {
 
 }
 
-process bowtie2 {
-    tag "bowtie2 on ${sample_name}"
-    label "process_medium"
 
-    publishDir "${launchDir}/analysis/bowtie2"
+// to get only mapped reads
+process filt_bam {
+    tag "filt_bam ${sample_name}"
+    label "process_low"
 
-    module 'bowtie2/2.3.4.1'
+    publishDir "${launchDir}/analysis/filt_bam"
+
     module "samtools/1.16.1"
 
     input:
-    tuple val(sample_name), path(reads), val(is_SE)
+    tuple val(sample_name), path(bam_file)
 
     output:
-    tuple val(sample_name), path("${sample_name}.mapped_unmapped.bam"), emit: bowtie2_mapped_unmapped_bam
-    tuple val(sample_name), path("${sample_name}.both_unmapped.bam"), val(is_SE), emit: bowtie2_bam_both_unmapped_bam
-    path("${sample_name}.mapped_unmapped.stats"), emit: samtools_stats
+    tuple val(sample_name), path("${sample_name}.sorted.mapped.bam"), emit: filt_bam
 
     script:
-    index = params.bowtie2.(params.host_genome)
     """
-    bowtie2 -p ${task.cpus} -x ${index} \
-    -1 ${reads[0]} -2 ${reads[1]} \
-    | samtools sort -O BAM -o ${sample_name}.mapped_unmapped.bam
-
-    samtools index -@ 4 ${sample_name}.mapped_unmapped.bam
-    samtools stats -@ 4 ${sample_name}.mapped_unmapped.bam > ${sample_name}.mapped_unmapped.stats
-
-    samtools view -@ 4 -b -f 12 -F 256 \
-    ${sample_name}.mapped_unmapped.bam > ${sample_name}.both_unmapped.bam
-
+    samtools view -b -f 2 ${bam_file} > ${sample_name}_unsored.mapped.bam
+    samtools sort -n ${sample_name}_unsored.mapped.bam -o ${sample_name}.sorted.mapped.bam
     """
 }
 
 
-process split_reads_from_unmapped {
-    tag "split reads - ${sample_name}"
-    label "process_medium"
+process get_mapped_reads {
+    tag "get_mapped_reads ${sample_name}"
+    label "process_low"
 
-    publishDir "${launchDir}/analysis/split_reads"
+    publishDir "${launchDir}/analysis/mapped_reads_from_bam"
 
     module "samtools/1.16.1"
 
     input:
-    tuple val(sample_name), path(bam_file), val(is_SE)
+    tuple val(sample_name), path(bam_file)
 
     output:
-    tuple val(sample_name), path("${sample_name}.host_remove.R{1,2}.fastq.gz"), val(is_SE),  emit: split_reads
+    tuple val(sample_name), path("${sample_name}_R{1,2}.fastq.gz"), emit: mapped_reads
 
     script:
     """
-    samtools sort -n ${bam_file} -o ${sample_name}.sorted.bam
-    samtools fastq -@ 10 ${sample_name}.sorted.bam \
-        -1 ${sample_name}.host_remove.R1.fastq.gz \
-        -2 ${sample_name}.host_remove.R2.fastq.gz \
+    samtools fastq ${bam_file} \
+        -1 ${sample_name}_R1.fastq.gz \
+        -2 ${sample_name}_R2.fastq.gz \
         -0 /dev/null -s /dev/null -n
     """
 }
+
+process kraken2{
+    tag "kraken2 on ${sample_name}"
+    label "process_high"
+
+    publishDir "${launchDir}/analysis/kraken2"
+
+    module "kraken/2.1.2"
+
+    input:
+    tuple val(sample_name), path(reads)
+
+    output:
+    path("*"), emit: kraken2_output
+
+    script:
+    def kraken2_db = "/mnt/beegfs/kimj32/reference/KRAKEN_DB"
+    """
+        kraken2 --db ${kraken2_db} \
+        --threads ${task.cpus} \
+        --use-names \
+        --output ${sample_name}_kraken.txt \
+        --report ${sample_name}_report.txt \
+        --paired \
+        ${reads}
+     """
+}
+
 
 // See https://bioinformatics.stackexchange.com/questions/20227/how-does-one-account-for-both-single-end-and-paired-end-reads-as-input-in-a-next
 ch_samplesheet = Channel.fromPath(params.samplesheet, checkIfExists: true)
@@ -260,6 +277,12 @@ workflow {
     bwa_mem(fastp.out.trim_reads)
     samtools(bwa_mem.out.bam_file)
     multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, samtools.out.stats_out).collect() )
+
+    if (params.run_kraken) {
+        filt_bam(bwa_mem.out.bam_file)
+        get_mapped_reads(filt_bam.out.filt_bam)
+        kraken2(get_mapped_reads.out.mapped_reads)
+    }
 }
 
 workflow.onComplete {
