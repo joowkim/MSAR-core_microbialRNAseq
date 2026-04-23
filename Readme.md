@@ -1,4 +1,4 @@
-# Microbial RNAseq using `megahit, metaphlan4` and `humann3` pipeline
+# Microbial RNAseq using `megahit, metaphlan4`, `kraken` and `humann3` pipeline
 
 ## Overview of the workflow
 
@@ -36,7 +36,7 @@
 ## How to execute the pipeline
 Adjust the configureation files such as `metaphlan4_conf/run.config and cluster.config` After that, 
 ```
-sbatch run_metaphlan4.slurm
+sbatch run_metagenomics.slurm
 ```
 
 ## Dependency
