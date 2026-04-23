@@ -27,7 +27,7 @@ This repo contains multiple independent Nextflow DSL2 workflows for shotgun meta
 
 | Workflow | File | Purpose |
 |---|---|---|
-| Custom gene mapping | `custom_gene_mapping.nf` | QC → trim → screen → BWA-MEM alignment → optional Kraken2 |
+| Custom gene mapping | `custom_gene_mapping.nf` | QC → trim → screen → BWA-MEM alignment → optional Kraken2 + kraken-biom |
 | QC | `qc.nf` | FastQC + optional fastp + FastQ Screen (standalone, not modularized) |
 | MetaPhlAn4 / HUMAnN | `metaphlan4.nf` | QC → trim → host removal (bowtie2) → MetaPhlAn4, HUMAnN3, Kraken2, MEGAHIT (feature-flagged) |
 | BAM to Kraken | `from-bam-to-kraken.nf` | Starts from existing BAMs |
@@ -64,6 +64,8 @@ All `publishDir` paths use `${launchDir}/analysis/<tool>/`. Outputs land next to
 
 Most tools are loaded via HPC `module` directives. MultiQC uses a Singularity container (`processes.config`). Singularity is enabled globally in `cluster.config`.
 
+`kraken_biom` is an exception — it uses a Python venv at `~/beegfs/python_env/kraken2/` invoked directly via its full binary path (no `module`, no `source activate`).
+
 ### Key Parameters (custom_gene_mapping)
 
 | Param | Default | Description |
@@ -72,4 +74,4 @@ Most tools are loaded via HPC `module` directives. MultiQC uses a Singularity co
 | `params.bwa_index` | `""` | Path to BWA index (required) |
 | `params.run_name` | `"multiqc_report"` | MultiQC output filename |
 | `params.host_genome` | `"mouse"` | Host genome key for fastq_screen |
-| `params.run_kraken` | `false` | Enable filt_bam → get_mapped_reads → kraken2 branch |
+| `params.run_kraken` | `false` | Enable filt_bam → get_mapped_reads → kraken2 → kraken_biom branch |
