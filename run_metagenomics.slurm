@@ -14,7 +14,7 @@ module load nextflow/23.10.0
 module load singularity/3.8.0
 module load java/21.0.6
 
-nextflow run metaphlan4.nf -c ./metaphlan4_conf/run.config -resume -profile slurm
+nextflow run metagenomics.nf -c ./metagenomics_conf/run.config -resume -profile slurm
 
 module unload nextflow/23.10.0
 module unload singularity/3.8.0
