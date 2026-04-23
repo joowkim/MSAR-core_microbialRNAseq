@@ -304,7 +304,8 @@ process kraken2{
     tuple val(sample_name), path(reads), val(is_SE)
 
     output:
-    path("*"), emit: kraken2_output
+    path("*_kraken.txt")
+    path("*_report.txt"), emit: kraken2_report
 
     script:
     def kraken2_db = "/mnt/beegfs/kimj32/reference/KRAKEN_DB"
@@ -317,6 +318,26 @@ process kraken2{
         --paired \
         ${reads}
      """
+}
+
+
+process kraken_biom {
+    tag "kraken_biom"
+    label "process_low"
+
+    publishDir "${launchDir}/analysis/kraken_biom", mode: "copy"
+
+    input:
+    path(reports)
+
+    output:
+    path("biom_table.tsv"), emit: biom_table
+
+    script:
+    def kraken_biom = "~/beegfs/python_env/kraken2/bin/kraken-biom"
+    """
+    ${kraken_biom} ${reports} --fmt tsv -o biom_table.tsv
+    """
 }
 
 
@@ -443,7 +464,8 @@ workflow {
 
     if (params.run_kraken2) {
         kraken2(split_reads_from_unmapped.out.split_reads)
-        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats, kraken2.out.kraken2_output).collect() )
+        kraken_biom(kraken2.out.kraken2_report.collect())
+        multiqc( fastq_screen.out.fastq_screen_out.mix(fastqc.out.zips, fastp.out.fastp_json, bowtie2.out.samtools_stats).collect() )
     }
 
     if (params.run_StrainPhlAn) {
