@@ -2,7 +2,7 @@ process kraken2 {
     tag "kraken2 on ${sample_name}"
     label "process_high"
 
-    publishDir "${launchDir}/analysis/kraken2"
+    publishDir "${launchDir}/analysis/kraken2", mode: "copy"
 
     module "kraken/2.1.2"
 
