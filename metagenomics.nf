@@ -187,7 +187,8 @@ process metaphlan {
     tuple val(sample_name), path(reads), val(is_SE)
 
     output:
-    path("*")
+    path("${sample_name}.bowtie2.bz2")
+    tuple val(sample_name), path("${sample_name}.profiled_metagenome.txt"), emit: profiled_metagenome
 
     script:
     def bowtie2db = "/mnt/beegfs/kimj32/reference/metaphlan4/metaphlan_databases/"
@@ -319,6 +320,27 @@ process kraken2{
 }
 
 
+process make_taxa_counts {
+    tag "${sample_name}"
+    label "process_low"
+
+    publishDir "${launchDir}/analysis/taxa_counts", mode: "copy"
+
+    input:
+    tuple val(sample_name), path(profiled_metagenome)
+
+    output:
+    path("${sample_name}.species.txt")
+    path("${sample_name}.genus.txt")
+
+    script:
+    """
+    grep 's__' ${profiled_metagenome} | grep -v 't__' | cut -f1,5 | sed 's/.*|//g' > ${sample_name}.species.txt
+    grep 'g__' ${profiled_metagenome} | grep -v 't__' | grep -v 's__' | cut -f1,5 | sed 's/.*|//g' > ${sample_name}.genus.txt
+    """
+}
+
+
 // https://github.com/biobakery/MetaPhlAn/wiki/StrainPhlAn-4.1
 process StrainPhlAn{
     tag "StrainPhlAn on ${sample_name}"
@@ -407,6 +429,7 @@ workflow {
     if (params.run_metaphlan) {
         //metaphlan(fastp.out.trim_reads)
         metaphlan(split_reads_from_unmapped.out.split_reads)
+        make_taxa_counts(metaphlan.out.profiled_metagenome)
     }
     if (params.run_megahit) {
         //megahit(fastp.out.trim_reads)
