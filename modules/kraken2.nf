@@ -10,7 +10,8 @@ process kraken2 {
     tuple val(sample_name), path(reads)
 
     output:
-    path("*"), emit: kraken2_output
+    path("*_kraken.txt")
+    path("*_report.txt"), emit: kraken2_report
 
     script:
     def kraken2_db = "/mnt/beegfs/kimj32/reference/KRAKEN_DB"

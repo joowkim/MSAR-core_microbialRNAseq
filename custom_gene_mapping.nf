@@ -10,6 +10,7 @@ include { filt_bam         } from './modules/filt_bam'
 include { get_mapped_reads } from './modules/get_mapped_reads'
 include { kraken2          } from './modules/kraken2'
 include { merge_idxstats   } from './modules/merge_idxstats'
+include { kraken_biom      } from './modules/kraken_biom'
 
 
 ch_reads = Channel
@@ -44,6 +45,7 @@ workflow {
         filt_bam(bwa_mem.out.bam_file)
         get_mapped_reads(filt_bam.out.filt_bam)
         kraken2(get_mapped_reads.out.mapped_reads)
+        kraken_biom(kraken2.out.kraken2_report.collect())
     }
 }
 
